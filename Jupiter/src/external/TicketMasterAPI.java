@@ -6,9 +6,16 @@ import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
+
+import entity.Item;
 
 
 public class TicketMasterAPI {
@@ -25,7 +32,7 @@ public class TicketMasterAPI {
 		tmApi.queryAPI(29.682684, -95.295410);
 	}
 
-	public JSONArray search(double lat, double lon, String keyword) {
+	public List<Item> search(double lat, double lon, String keyword) {
 		if(keyword == null) {
 			keyword = DEFAULT_KEYWORD;
 		}
@@ -47,7 +54,7 @@ public class TicketMasterAPI {
 			int responseCode = connection.getResponseCode();
 			System.out.println("Response code" + responseCode);
 			if(responseCode != 200) {
-				return new JSONArray();
+				return new ArrayList<>();
 			}
 			// efficiently read 
 			BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
@@ -64,22 +71,124 @@ public class TicketMasterAPI {
 			// if it is here, that means the object is valid
 			if(!object.isNull("_embedded")){
 				JSONObject embedded = object.getJSONObject("_embedded");
-				return embedded.getJSONArray("events");
+				return getItemList(embedded.getJSONArray("events"));
 			}
 
 			
 		}catch(Exception e){
 			e.printStackTrace();
 		}
-		return new JSONArray();
+		return new ArrayList<>();
 		
 	}
+	
+	private List<Item> getItemList(JSONArray events) throws JSONException{
+		List<Item> itemList = new ArrayList<>();
+		for(int i = 0; i < events.length(); i++) {
+			JSONObject event = events.getJSONObject(i);
+			Item.ItemBuilder builder = new Item.ItemBuilder();
+			if(!event.isNull("id")) {
+				builder.setItemId(event.getString("id"));
+			}
+			if(!event.isNull("name")) {
+				builder.setItemId(event.getString("name"));
+			}
+			if(!event.isNull("url")) {
+				builder.setUrl(event.getString("url"));
+			}
+			if(!event.isNull("distance")) {
+				builder.setDistance(event.getDouble("distance"));
+			}
+
+			builder.setAddress(getAddress(event))
+			.setCategories(getCategories(event))
+			.setImageUrl(getImageUrl(event));
+			
+			itemList.add(builder.build());
+		}
+		return itemList;
+		
+	}
+	private String getImageUrl(JSONObject event) throws JSONException {
+		if(event.isNull("images")) {
+			JSONArray images = event.getJSONArray("images");
+			for(int i = 0; i < images.length(); i++) {
+				JSONObject image = images.getJSONObject(i);
+				if(!image.isNull("url")) {
+					return image.getString("url");
+				}
+				
+			}
+			
+		}
+		return "";
+		
+	}
+	private Set<String> getCategories(JSONObject event) throws JSONException {
+		Set<String> categories = new HashSet<>();
+		if(event.isNull("classifications")) {
+			JSONArray classifications = event.getJSONArray("classifications");
+			for(int i = 0; i < classifications.length(); i++) {
+				JSONObject classification = classifications.getJSONObject(i);
+				if(!classification.isNull("segement")) {
+					JSONObject segment = classification.getJSONObject("segement");
+					if(!segment.isNull("name")) {
+						categories.add(segment.getString("name"));
+					}
+				}
+				
+			}
+			
+		}
+		return categories;
+		
+	}
+	// only used for ticketMaster
+	private String getAddress(JSONObject event) throws JSONException{
+		if(event.isNull("_embedded")) {
+			JSONObject embedded = event.getJSONObject("_embedded");
+			if(!embedded.isNull("_venues")) {
+				JSONArray venues = embedded.getJSONArray("_venues");
+				for(int i = 0; i < venues.length(); i++) {
+					JSONObject venue = venues.getJSONObject(i);
+					StringBuilder builder = new StringBuilder();
+					if(!venue.isNull("address")) {
+						JSONObject address = venue.getJSONObject("address");
+						if(!address.isNull("line1")) {
+							builder.append(address.getString("line1"));	
+						}
+						if(!address.isNull("line2")) {
+							builder.append(",");
+							builder.append(address.getString("line2"));	
+						}
+						if(!address.isNull("line3")) {
+							builder.append(",");
+							builder.append(address.getString("line3"));	
+						}
+					}
+					if(!venue.isNull("city")) {
+						JSONObject city = venue.getJSONObject("city");
+						builder.append(",");
+						builder.append(city.getString("name"));
+					}
+					String result = builder.toString();
+					if(!result.isEmpty()) {
+						return result;
+						
+					}
+				}
+			}
+		}
+		return "";
+		
+	}
+	
 	private void queryAPI(double lat, double lon) {
-		JSONArray events = search(lat, lon, null);
+		List<Item> events = search(lat, lon, null);
 		try {
-			for(int i = 0; i < events.length(); ++i) {
-				JSONObject event = events.getJSONObject(i);
-				System.out.println(event.toString(2));	
+			for(int i = 0; i < events.size(); ++i) {
+				Item event = events.get(i);
+				System.out.println(event.toJSONObject());	
 			}
 		}catch(Exception e) {
 			e.printStackTrace();
@@ -87,5 +196,6 @@ public class TicketMasterAPI {
 
 
 
-}
+	}
+	
 }

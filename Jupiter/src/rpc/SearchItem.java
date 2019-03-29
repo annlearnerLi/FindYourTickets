@@ -2,8 +2,15 @@ package rpc;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.List;
+
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import db.DBConnection;
+import db.DBConnectionFactory;
+import entity.Item;
+
 import org.json.JSONArray;
 
 import javax.servlet.ServletException;
@@ -34,16 +41,34 @@ public class SearchItem extends HttpServlet {
 		// TODO Auto-generated method stub
 		// response.getWriter().append("Served at: ").append(request.getContextPath());
 		// 用JSON array
-		response.setContentType("application/json");
-		PrintWriter writer = response.getWriter();
-		JSONArray array = new JSONArray();
+		double lat = Double.parseDouble(request.getParameter("lat"));
+		double lon = Double.parseDouble(request.getParameter("lon"));
+		String term = request.getParameter("term");
+		
+		DBConnection connection = DBConnectionFactory.getConnection();
 		try {
-			array.put(new JSONObject().put("username", "abcd"));
-			array.put(new JSONObject().put("username", "1234"));	
-		}catch(JSONException e) {
-			e.printStackTrace();
-		}
-		RpcHelper.writeJsonArray(response, array);
+			List<Item> items = connection.searchItems(lat, lon, term);
+			JSONArray array = new JSONArray();
+			for(Item cur : items) {
+				array.put(cur.toJSONObject());
+			}
+			RpcHelper.writeJsonArray(response, array);
+		}catch (Exception e) {
+	  		   e.printStackTrace();
+	    }finally {
+	  		 connection.close();
+        }
+		
+//		response.setContentType("application/json");
+//		PrintWriter writer = response.getWriter();
+//		JSONArray array = new JSONArray();
+//		try {
+//			array.put(new JSONObject().put("username", "abcd"));
+//			array.put(new JSONObject().put("username", "1234"));	
+//		}catch(JSONException e) {
+//			e.printStackTrace();
+//		}
+//		RpcHelper.writeJsonArray(response, array);
 //		writer.print(array);
 //		writer.close();
 		
