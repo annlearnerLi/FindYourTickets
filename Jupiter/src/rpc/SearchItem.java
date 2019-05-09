@@ -3,6 +3,7 @@ package rpc;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
+import java.util.Set;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -18,6 +19,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 /**
  * Servlet implementation class SearchItem
@@ -41,6 +43,12 @@ public class SearchItem extends HttpServlet {
 		// TODO Auto-generated method stub
 		// response.getWriter().append("Served at: ").append(request.getContextPath());
 		// 用JSON array
+		HttpSession session = request.getSession(false);
+		if(session == null) {
+			response.setStatus(403);
+			return;
+		}
+		String userId = session.getAttribute("user_id").toString();
 		double lat = Double.parseDouble(request.getParameter("lat"));
 		double lon = Double.parseDouble(request.getParameter("lon"));
 		String term = request.getParameter("term");
@@ -48,9 +56,13 @@ public class SearchItem extends HttpServlet {
 		DBConnection connection = DBConnectionFactory.getConnection();
 		try {
 			List<Item> items = connection.searchItems(lat, lon, term);
+			Set<String> favoritedItemIds = connection.getFavoriteItemIds(userId);
+
 			JSONArray array = new JSONArray();
 			for(Item cur : items) {
+				JSONObject obj = cur.toJSONObject();
 				array.put(cur.toJSONObject());
+				array.put(obj);
 			}
 			RpcHelper.writeJsonArray(response, array);
 		}catch (Exception e) {

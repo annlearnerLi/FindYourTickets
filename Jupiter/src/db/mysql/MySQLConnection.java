@@ -152,14 +152,34 @@ public class MySQLConnection implements DBConnection {
 	@Override
 	public Set<String> getCategories(String itemId) {
 		// TODO Auto-generated method stub
-		return null;
+		if (conn == null) {
+			return null;
+		}
+		Set<String> categories = new HashSet<>();
+		try {
+			String sql = "SELECT category from categories WHERE item_id = ? ";
+			PreparedStatement statement = conn.prepareStatement(sql);
+			statement.setString(1, itemId);
+			ResultSet rs = statement.executeQuery();
+			while (rs.next()) {
+				String category = rs.getString("category");
+				categories.add(category);
+			}
+		} catch (SQLException e) {
+			System.out.println(e.getMessage());
+		}
+		return categories;
+
+
 	}
 
 	@Override
 	public List<Item> searchItems(double lat, double lon, String term) {
-		// TODO Auto-generated method stub		
+		// TODO Auto-generated method stub
+		System.out.println("search items with key " + term);
 		TicketMasterAPI ticketMasterAPI = new TicketMasterAPI();
         List<Item> items = ticketMasterAPI.search(lat, lon, term);
+        System.out.println("search items with key " + items);
         for(Item item : items) {
         	saveItem(item);
         }
@@ -246,6 +266,30 @@ public class MySQLConnection implements DBConnection {
 			e.printStackTrace();
 		}		
 		return false;
+	}
+	public boolean registerUser(String userId, String password, String firstname ,String lastname) {
+		if(conn == null) {
+			System.err.println("connection is not valid !");
+			return false;
+		}
+		try {
+			// ignore : if not existed we do this operation
+			String sql = "INSERT IGNORE INTO users VALUES (?, ?, ?, ?)";
+			PreparedStatement ps = conn.prepareStatement(sql);
+			ps.setString(1, userId);
+			ps.setString(2, password);
+			ps.setString(3, firstname);
+			ps.setString(4, lastname);
+			
+			// 1 Successful 0 failed
+			return ps.executeUpdate() == 1;
+
+		}catch(Exception e){
+			e.printStackTrace();
+
+		}
+		return false;
+		
 	}
 
 }

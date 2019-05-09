@@ -9,6 +9,17 @@ public interface DBConnection {
 	/**
 	 * Close the connection.
 	 */
+	/**
+	 * Register one user
+	 * 
+	 * @param userId
+	 * @param password
+	 * @param firstname
+	 * @param lastname
+	 * @return boolean
+	 */
+	public boolean registerUser(String userId, String password, String firstname, String lastname);
+
 	public void close();
 	/**
 	 * Insert the favorite items for a user.

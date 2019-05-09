@@ -33,6 +33,11 @@ public class Item {
 		
 	}
 	
+	@Override
+	public String toString() {
+		return "id: " + itemId + " ,name: " + name;
+	}
+	
 	public String getItemId() {
 		return itemId;
 	}
